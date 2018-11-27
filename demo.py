@@ -72,23 +72,19 @@ def yolo_full():
     saver = tf.train.Saver(var_list=tf.global_variables(scope='detector'))
 
     boxes = detections_boxes(detections)
-    # session_conf = tf.ConfigProto(
-    #     intra_op_parallelism_threads=1,
-    #     inter_op_parallelism_threads=1)
     session_conf = tf.ConfigProto(intra_op_parallelism_threads=FLAGS.thread, inter_op_parallelism_threads=FLAGS.thread, \
-                        allow_soft_placement=True, device_count = {'CPU': 1})
+                        allow_soft_placement=True, device_count = {'GPU': 1})
     with tf.Session(config=session_conf) as sess:
     
-    # with tf.Session() as sess:
         saver.restore(sess, ckpt_file)
         tf.summary.FileWriter("TensorBoard/", graph = sess.graph)
         print( ">>>>>>>>>>>>>>>>> %d"  % len(tf.get_default_graph().as_graph_def().node))
         print('Model restored.')
-        # start = time.time()
+        start = time.time()
         detected_boxes = sess.run(
             boxes, feed_dict={inputs: [np.array(img_resized, dtype=np.float32)]})
-        # end = time.time()
-        # print("%2.2f secs"%(end - start))
+        end = time.time()
+        print("%2.2f secs"%(end - start))
         '''
         opts = tf.profiler.ProfileOptionBuilder.float_operation()    
         flops = tf.profiler.profile(tf.get_default_graph() , run_meta=tf.RunMetadata(), cmd='op', options=opts)
@@ -97,7 +93,6 @@ def yolo_full():
             #print('25 x 25 x 9 would be',2*25*25*9) # ignores internal dim, repeats first
             print('TF stats gives',flops.total_float_ops)
         '''
-        '''        
         #output_node_names = "detector/yolo-v3-tiny/detections"
         output_node_names = "concat_1"
         output_graph_def = graph_util.convert_variables_to_constants(
@@ -106,11 +101,10 @@ def yolo_full():
             output_node_names=output_node_names.split( "," ))
     
         print( ">>>>>>>>>>> %d ops in the final graph."  % len( output_graph_def.node))
-        with tf.gfile.GFile( "frozen_model_yolov3-tiny.pb", "wb" ) as f:
+        with tf.gfile.GFile( "save_model/tiny/pb/frozen_model_yolov3-tiny.pb", "wb" ) as f:
             f.write( output_graph_def.SerializeToString( ))
         #builder = tf.saved_model.builder.SavedModelBuilder('./savemodel')
         #builder.add_meta_graph_and_variables(sess, ['cpu_server_1'])
-        '''
 
 
 

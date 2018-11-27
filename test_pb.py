@@ -15,7 +15,7 @@ tf.app.flags.DEFINE_integer('size', 416, 'Image size')
 tf.app.flags.DEFINE_string('output_img', '', 'Output image')
 tf.app.flags.DEFINE_float('conf_threshold', 0.5, 'Confidence threshold')
 tf.app.flags.DEFINE_float('iou_threshold', 0.4, 'IoU threshold')
-tf.app.flags.DEFINE_string('class_names', 'coco.names', 'File with class names')
+tf.app.flags.DEFINE_string('class_names', 'data/coco.names', 'File with class names')
 
 
 def freeze_graph( input_checkpoint,output_graph):
@@ -89,15 +89,9 @@ def freeze_graph_test(pb_path, image_path):
  
             # 定义输入的张量名称,对应网络结构的输入张量
             # input:0作为输入图像,keep_prob:0作为dropout的参数,测试时值为1,is_training:0训练参数
-            #input_image_tensor = sess.graph.get_tensor_by_name("detector/truediv:0")
             input_image_tensor = sess.graph.get_tensor_by_name("Placeholder:0")
-            #input_image_tensor = input_image_tensor / 255
-            #input_image_tensor = sess.graph.get_tensor_by_name("inputs:0")
-            #input_keep_prob_tensor = sess.graph.get_tensor_by_name("keep_prob:0")
-            #input_is_training_tensor = sess.graph.get_tensor_by_name("is_training:0")
  
             # 定义输出的张量名称
-            #output_tensor_name = sess.graph.get_tensor_by_name("detector/yolo-v3-tiny/detections:0")
             output_tensor_name = sess.graph.get_tensor_by_name("concat_1:0")
  
             # 读取测试图片
@@ -105,20 +99,7 @@ def freeze_graph_test(pb_path, image_path):
             img = Image.open(image_path )
             img_resized = img.resize( size=(416,416) )
             
-            #im=read_image(image_path,416,416,normalization=True)
-            #im=im[np.newaxis,:]
             # 测试读出来的模型是否正确，注意这里传入的是输出和输入节点的tensor的名字，不是操作节点的名字
-            # out=sess.run("InceptionV3/Logits/SpatialSqueeze:0", feed_dict={'input:0': im,'keep_prob:0':1.0,'is_training:0':False})
-            
-            #model = yolo_v3_tiny.yolo_v3_tiny
-            #detections = model(input_image_tensor , 80 ,data_format='NHWC')
-            #boxes = detections_boxes(detections)
-            #print (np.array(img_resized, dtype=np.float32))
-            
-            #detected_boxes = sess.run( sess.graph_def , 
-            #        feed_dict={ input_image_tensor: [np.array(img_resized, dtype=np.float32)] })
-           
-          
             detected_boxes = sess.run(output_tensor_name , 
                     feed_dict={ input_image_tensor: [np.array(img_resized, dtype=np.float32)] })
            
@@ -130,9 +111,6 @@ def freeze_graph_test(pb_path, image_path):
                 print('TF stats gives',flops.total_float_ops) 
         
     print ('[pb] output tensor shape: ', detected_boxes.shape) 
-    #print (detected_boxes[0,1,1]) 
-    #print (np.array(img_resized, dtype=np.float32)[111,111]) 
-    #print (input_image_tensor.shape) 
     filtered_boxes = non_max_suppression(detected_boxes,
                                          confidence_threshold=FLAGS.conf_threshold,
                                          iou_threshold=FLAGS.iou_threshold)
@@ -141,18 +119,17 @@ def freeze_graph_test(pb_path, image_path):
     
     writer = tf.summary.FileWriter("TensorBoard/", graph = sess.graph)
     #img.save(FLAGS.output_img)
-    img.save("pboutimage.jpg")
+    img.save("result_pb.jpg")
 
 
-image_path = './dog.jpg'
-#image_path = './horses.jpg'
+image_path = 'data/dog.jpg'
 
 input_checkpoint='./saved_model/yolov3-tiny.ckpt'
-out_pb_path="frozen_model_yolov3-tiny.pb" 
+pb_path="./save_model/tiny/pb/frozen_model_yolov3-tiny.pb" 
 #out_pb_path="./saved_model/tiny/frozen_yolov3-tiny.pb" 
 #out_pb_path="frozen_flowers_model_yolov3-tiny.pb" 
 
 #freeze_graph( input_checkpoint, out_pb_path)
-freeze_graph_test(out_pb_path, image_path)
+freeze_graph_test(pb_path, image_path)
 
 
